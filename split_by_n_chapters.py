@@ -2,7 +2,6 @@ import os
 from ebooklib import epub
 from base_splitter import BaseSplitter
 from meta_utils import get_meta_value
-
 from bs4 import BeautifulSoup
 import ebooklib
 
@@ -22,9 +21,10 @@ def ensure_css_link(chapter_content, css_items):
     return str(soup)
 
 class SplitByNChapters(BaseSplitter):
-    def __init__(self, epub_path, out_dir, n_chapters):
+    def __init__(self, epub_path, out_dir, n_chapters, add_title_suffix=False):
         super().__init__(epub_path, out_dir)
         self.n_chapters = n_chapters
+        self.add_title_suffix = add_title_suffix
 
     def split(self):
         os.makedirs(self.out_dir, exist_ok=True)
@@ -36,20 +36,29 @@ class SplitByNChapters(BaseSplitter):
                 main_title = get_meta_value(title_val[0])
             else:
                 main_title = "Untitled"
-            new_book.set_title(f"{main_title} - 第{i+1}-{min(i+self.n_chapters, len(self.chapters))}章")
+            subset = self.chapters[i:i+self.n_chapters]
+            if self.add_title_suffix:
+                start_chapter = i + 1
+                end_chapter = i + len(subset)
+                new_book.set_title(f"{main_title} - 第{start_chapter}-{end_chapter}章")
+            else:
+                new_book.set_title(main_title)
             lang_val = self.book.get_metadata('DC', 'language')
             if lang_val:
                 new_book.set_language(get_meta_value(lang_val[0]))
             for _, v in self.book.get_metadata('DC', 'creator'):
                 new_book.add_author(get_meta_value(v))
-            subset = self.chapters[i:i+self.n_chapters]
             processed_subset = []
+            toc_list = []
             for chapter in subset:
-                # 确保章节内容引用CSS
                 new_content = ensure_css_link(chapter.content, css_items)
                 chapter.content = new_content.encode("utf-8")
                 new_book.add_item(chapter)
                 processed_subset.append(chapter)
+                # 构建TOC（目录）条目
+                chap_title = getattr(chapter, 'title', None) or getattr(chapter, 'get_name', lambda: None)() or "无标题"
+                toc_list.append(epub.Link(chapter.file_name, chap_title, chapter.id))
+            new_book.toc = tuple(toc_list)
             self.copy_resources(new_book)
             new_book.spine = ['nav'] + processed_subset
             new_book.add_item(epub.EpubNcx())

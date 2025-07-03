@@ -32,7 +32,7 @@ class SplitByChapter(BaseSplitter):
                 main_title = get_meta_value(title_val[0])
             else:
                 main_title = "Untitled"
-            new_book.set_title(f"{main_title} - 第{idx+1}章")
+            new_book.set_title(main_title)
             lang_val = self.book.get_metadata('DC', 'language')
             if lang_val:
                 new_book.set_language(get_meta_value(lang_val[0]))
@@ -42,6 +42,9 @@ class SplitByChapter(BaseSplitter):
             new_content = ensure_css_link(chapter.content, css_items)
             chapter.content = new_content.encode("utf-8")
             new_book.add_item(chapter)
+            # 目录
+            chap_title = getattr(chapter, 'title', None) or getattr(chapter, 'get_name', lambda: None)() or "无标题"
+            new_book.toc = (epub.Link(chapter.file_name, chap_title, chapter.id),)
             self.copy_resources(new_book)
             new_book.spine = ['nav', chapter]
             new_book.add_item(epub.EpubNcx())

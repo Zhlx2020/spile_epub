@@ -56,12 +56,15 @@ class SplitByTocLevel(BaseSplitter):
             for _, v in self.book.get_metadata('DC', 'creator'):
                 new_book.add_author(get_meta_value(v))
             processed_chapters = []
+            toc_list = []
             for chapter in chapters:
-                # 确保章节内容引用CSS
                 new_content = ensure_css_link(chapter.content, css_items)
                 chapter.content = new_content.encode("utf-8")
                 new_book.add_item(chapter)
                 processed_chapters.append(chapter)
+                chap_title = getattr(chapter, 'title', None) or getattr(chapter, 'get_name', lambda: None)() or "无标题"
+                toc_list.append(epub.Link(chapter.file_name, chap_title, chapter.id))
+            new_book.toc = tuple(toc_list)
             self.copy_resources(new_book)
             new_book.spine = ['nav'] + processed_chapters
             new_book.add_item(epub.EpubNcx())

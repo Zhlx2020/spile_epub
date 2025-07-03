@@ -12,7 +12,6 @@ class BaseSplitter:
         raise NotImplementedError("子类必须实现 split() 方法")
 
     def copy_resources(self, new_book):
-        # 复制所有资源（图片、样式、字体、音视频等，除了文档）
         import ebooklib
         for item in self.book.get_items():
             if item.get_type() in [
