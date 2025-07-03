@@ -9,10 +9,9 @@ class BaseSplitter:
         self.chapters = list(self.book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
 
     def split(self):
-        raise NotImplementedError("子类必须实现 split() 方法")
+        raise NotImplementedError("Must be implemented in subclass.")
 
     def copy_resources(self, new_book):
-        import ebooklib
         for item in self.book.get_items():
             if item.get_type() in [
                 ebooklib.ITEM_IMAGE,

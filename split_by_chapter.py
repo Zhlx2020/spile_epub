@@ -2,24 +2,8 @@ import os
 from ebooklib import epub
 from base_splitter import BaseSplitter
 from meta_utils import get_meta_value
-
-from bs4 import BeautifulSoup
+from split_utils import ensure_css_link, get_chapter_title
 import ebooklib
-
-def ensure_css_link(chapter_content, css_items):
-    soup = BeautifulSoup(chapter_content, "html.parser")
-    head = soup.head
-    if head is None:
-        head = soup.new_tag("head")
-        if soup.html:
-            soup.html.insert(0, head)
-        else:
-            soup.insert(0, head)
-    for css in css_items:
-        if not soup.find("link", {"href": css.file_name}):
-            link_tag = soup.new_tag("link", rel="stylesheet", href=css.file_name, type="text/css")
-            head.append(link_tag)
-    return str(soup)
 
 class SplitByChapter(BaseSplitter):
     def split(self):
@@ -28,22 +12,19 @@ class SplitByChapter(BaseSplitter):
         for idx, chapter in enumerate(self.chapters):
             new_book = epub.EpubBook()
             title_val = self.book.get_metadata('DC', 'title')
-            if title_val:
-                main_title = get_meta_value(title_val[0])
-            else:
-                main_title = "Untitled"
+            main_title = get_meta_value(title_val[0]) if title_val else "Untitled"
             new_book.set_title(main_title)
             lang_val = self.book.get_metadata('DC', 'language')
             if lang_val:
                 new_book.set_language(get_meta_value(lang_val[0]))
             for _, v in self.book.get_metadata('DC', 'creator'):
                 new_book.add_author(get_meta_value(v))
-            # 确保章节内容引用CSS
+            # 章节处理
             new_content = ensure_css_link(chapter.content, css_items)
             chapter.content = new_content.encode("utf-8")
             new_book.add_item(chapter)
             # 目录
-            chap_title = getattr(chapter, 'title', None) or getattr(chapter, 'get_name', lambda: None)() or "无标题"
+            chap_title = get_chapter_title(chapter)
             new_book.toc = (epub.Link(chapter.file_name, chap_title, chapter.id),)
             self.copy_resources(new_book)
             new_book.spine = ['nav', chapter]

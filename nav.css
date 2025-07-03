@@ -1,0 +1,8 @@
+nav[epub|type="toc"] ol {
+  list-style: none;
+  margin-left: 0;
+  padding-left: 1em;
+}
+nav[epub|type="toc"] ol > li:before {
+  content: "";
+}
